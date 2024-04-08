@@ -113,6 +113,13 @@ class GenreViewSet(viewsets.ModelViewSet):
             "data" : data,
             "message" : "Received data successfully"
         }
+        dat = self.queryset.values('books','genre_name')
+        dato = self.queryset.values_list('books', flat=True)
+        dato = self.queryset.values_list('books','genre_name')
+        print(dat)
+        print(dato)
+        for x, y in dato:
+            print(x,y)
         return Response(data)
     
     @action(methods=['get'], detail=False)
@@ -123,18 +130,3 @@ class GenreViewSet(viewsets.ModelViewSet):
     
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
-@method_decorator(cache_page(60 * 60 * 2))
-def dispatch(self, *args, **kwargs):
-    return super().dispatch(*args, **kwargs)
-
-from rest_framework import permissions
-
-class BlocklistPermission(permissions.BasePermission):
-    """
-    Global permission check for blocked IPs.
-    """
-
-    def has_permission(self, request, view):
-        ip_addr = request.META['REMOTE_ADDR']
-        blocked = Blocklist.objects.filter(ip_addr=ip_addr).exists()
-        return not blocked
