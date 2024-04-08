@@ -16,6 +16,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 import json
 import celery
+from rest_framework.throttling import ScopedRateThrottle
 class custompagination(PageNumberPagination):
     page_size = 3
     page_size_query_param = 'page_size'
@@ -44,7 +45,6 @@ class BookListCreateAPIView(ListCreateAPIView):
         #     queryset = queryset.filter(book_name__icontains=book)
         
         return queryset
-    
 class BookDetailAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
@@ -52,16 +52,16 @@ class BookDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle, UserRateThrottle]
     
-    # def get_object(self):
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     lookup_url_kwargs = {}
-    #     for lookup_field in self.lookup_fields:
-    #         value = self.kwargs.get(lookup_field, None)
-    #         if value is not None:
-    #             lookup_url_kwargs[lookup_field] = value
-    #     obj = get_object_or_404(queryset, **lookup_url_kwargs)
-    #     self.check_object_permissions(self.request, obj)
-    #     return obj            
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwargs = {}
+        for lookup_field in self.lookup_fields:
+            value = self.kwargs.get(lookup_field, None)
+            if value is not None:
+                lookup_url_kwargs[lookup_field] = value
+        obj = get_object_or_404(queryset, **lookup_url_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj            
     
 class register(APIView):
     def post(self,request,*args,**kwargs):
@@ -120,3 +120,9 @@ class GenreViewSet(viewsets.ModelViewSet):
         qs = self.get_queryset()
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
+    
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+@method_decorator(cache_page(60 * 60 * 2))
+def dispatch(self, *args, **kwargs):
+    return super().dispatch(*args, **kwargs)
